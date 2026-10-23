@@ -1,0 +1,625 @@
+<title>ZedCV</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: one narrow column, three steps (Details, Pay K5, Download), live paper preview below the pay and download steps. */
+:root {
+  --bg: #F2F5F3;
+  --surface: #FFFFFF;
+  --fg: #14201A;
+  --muted: #55665D;
+  --line: #D3DDD7;
+  --accent: #1B6B49;
+  --accent-ink: #FFFFFF;
+  --copper: #B8561A;
+  --danger: #B3261E;
+  --paper: #FFFFFF;
+  --ink: #1B1B1B;
+  --ink-soft: #5B5B5B;
+  --font-display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1613; --surface: #17211C; --fg: #E7EFEA; --muted: #93A59B; --line: #263630;
+    --accent: #4FBF8B; --accent-ink: #072114; --copper: #F0914A; --danger: #F2877F;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1613; --surface: #17211C; --fg: #E7EFEA; --muted: #93A59B; --line: #263630;
+  --accent: #4FBF8B; --accent-ink: #072114; --copper: #F0914A; --danger: #F2877F;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+  padding-block: 20px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; line-height: 1.15; }
+h1 { font-size: 1.9rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.3rem; }
+h3 { font-size: 1.02rem; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 0.875rem; }
+header { display: flex; flex-direction: column; gap: 6px; }
+.brand { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.price-tag { font-family: var(--font-display); font-weight: 700; font-size: 0.85rem; color: var(--copper); border: 1.5px solid var(--copper); border-radius: 6px; padding: 1px 8px; }
+
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.step-btn { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: inherit; font-weight: 600; font-size: 0.9rem; padding: 10px 6px; border-radius: 8px; min-height: 44px; cursor: pointer; text-align: center; }
+.step-btn[aria-current="step"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.step-btn:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid var(--copper); outline-offset: 2px; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+legend { font-family: var(--font-display); font-weight: 700; font-size: 1.02rem; padding: 0; margin-bottom: 4px; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label { font-size: 0.85rem; font-weight: 600; }
+.field .hint { font-size: 0.8rem; color: var(--muted); }
+input, textarea, select {
+  font: inherit; font-size: 16px; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; width: 100%; min-width: 0; min-height: 44px;
+}
+textarea { resize: vertical; line-height: 1.4; }
+.item { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.item-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+.btn { appearance: none; font: inherit; font-weight: 700; border-radius: 8px; padding: 10px 16px; min-height: 44px; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.quiet { background: transparent; border-color: var(--line); color: var(--fg); font-weight: 600; }
+.btn.small { min-height: 36px; padding: 6px 12px; font-size: 0.875rem; }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.notice { border-left: 4px solid var(--copper); background: var(--bg); padding: 10px 12px; border-radius: 0 8px 8px 0; font-size: 0.9rem; display: flex; gap: 12px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.err { color: var(--danger); font-size: 0.9rem; min-height: 1.3em; }
+.ok { color: var(--accent); font-weight: 600; }
+
+.pay-amount { font-family: var(--font-display); font-weight: 700; font-size: 2.4rem; color: var(--copper); line-height: 1; }
+.pay-steps { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 8px; }
+.pay-to { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--bg); border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; }
+.pay-to strong { font-size: 1.15rem; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+
+.tabs { display: flex; gap: 8px; }
+.tab { appearance: none; font: inherit; font-weight: 600; font-size: 0.9rem; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 8px 16px; min-height: 40px; cursor: pointer; }
+.tab[aria-selected="true"] { border-color: var(--accent); color: var(--accent); background: var(--bg); }
+.preview-box { position: relative; }
+.paper { background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: clamp(18px, 5vw, 36px); font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.45; box-shadow: 0 1px 2px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.08); overflow-wrap: anywhere; }
+.paper.locked { filter: blur(5px); user-select: none; pointer-events: none; max-height: 420px; overflow: hidden; }
+.lock-tag { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; pointer-events: none; }
+.lock-tag span { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; font-weight: 700; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+.cv-title { text-align: center; font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+.cv-name { font-size: 24px; font-weight: 700; color: #14543A; line-height: 1.1; }
+.cv-contact { color: var(--ink-soft); font-size: 11.5px; margin-top: 4px; padding-bottom: 8px; border-bottom: 2px solid #14543A; }
+.center { text-align: center; }
+.cv-h { font-weight: 700; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 14px; padding-bottom: 2px; border-bottom: 1px solid #BBB; }
+.cv-p { margin-top: 6px; }
+.cv-kv { margin-top: 3px; display: grid; grid-template-columns: 11rem 1fr; gap: 8px; }
+.cv-kv b { font-weight: 700; }
+.cv-entry { margin-top: 8px; }
+.cv-entry .top { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-weight: 700; }
+.cv-entry .top span:last-child { font-weight: 400; color: var(--ink-soft); }
+.cv-entry .sub { color: var(--ink-soft); font-style: italic; }
+.cv-entry ul { margin: 3px 0 0; padding-left: 18px; }
+.cv-sig { display: flex; justify-content: space-between; gap: 24px; margin-top: 28px; color: var(--ink-soft); }
+.cv-sig span { flex: 1; border-top: 1px solid #333; padding-top: 2px; font-size: 11px; }
+.cv-sig span:last-child { flex: 0 0 30%; }
+.lt-p { margin-top: 10px; white-space: pre-line; }
+.lt-re { font-weight: 700; text-decoration: underline; }
+.dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 10px; }
+@media (prefers-reduced-motion: no-preference) { .btn, .tab, .step-btn { transition: background-color .15s, border-color .15s, color .15s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand"><h1>ZedCV</h1><span class="price-tag" id="priceTag">K5 per set</span></div>
+    <p class="muted">A clean, ATS-friendly CV and application letter in the format Zambian employers expect. Fill in your details, pay with Airtel Money, download both as PDF or Word.</p>
+  </header>
+
+  <div class="notice" id="demoBanner" hidden><span>Demo mode: payments are not checked here. The live site checks every payment on the server.</span></div>
+
+  <nav class="steps" aria-label="Steps">
+    <button class="step-btn" data-step="1" type="button">1. Details</button>
+    <button class="step-btn" data-step="2" type="button">2. Pay</button>
+    <button class="step-btn" data-step="3" type="button">3. Download</button>
+  </nav>
+
+  <section class="panel" id="p1" aria-labelledby="h-p1">
+    <h2 id="h-p1">Your details</h2>
+    <div class="notice" id="sampleNote"><span>This page starts with example details. Replace them with yours.</span><button class="btn small quiet" type="button" id="clearSample">Clear example</button></div>
+    <div id="formRoot"></div>
+    <p class="err" id="p1err" role="alert"></p>
+    <div class="actions"><button class="btn" type="button" id="toPay">Continue to payment</button></div>
+  </section>
+
+  <section class="panel" id="p2" hidden aria-labelledby="h-p2">
+    <h2 id="h-p2">Pay <span id="amt2">K5</span> to unlock your downloads</h2>
+    <div class="pay-amount" id="amtBig" aria-label="Amount to pay">K5</div>
+    <p class="muted">One payment covers your CV and your application letter, as PDF and Word.</p>
+    <ol class="pay-steps">
+      <li>Open Airtel Money on your phone.</li>
+      <li>Send <span class="amt-inline">K5</span> to this number:
+        <div class="pay-to" style="margin-top:8px"><strong id="momoNum"></strong><span class="muted small" id="momoName"></span><button class="btn small quiet" type="button" id="copyNum">Copy number</button></div>
+      </li>
+      <li>Type the transaction ID from the confirmation SMS below.</li>
+    </ol>
+    <div class="field">
+      <label for="txn">Airtel Money transaction ID</label>
+      <input id="txn" autocomplete="off" autocapitalize="characters" inputmode="text" placeholder="From your confirmation SMS">
+      <span class="hint">Payments can take up to a minute to appear. If the ID is not found, wait a moment and try again.</span>
+    </div>
+    <p class="err" id="p2err" role="alert"></p>
+    <div class="actions"><button class="btn" type="button" id="unlock">Unlock downloads</button><button class="btn quiet" type="button" data-step="1">Back to details</button></div>
+  </section>
+
+  <section class="panel" id="p3" hidden aria-labelledby="h-p3">
+    <h2 id="h-p3">Download your documents</h2>
+    <p class="ok" id="paidNote"></p>
+    <div class="dl-grid">
+      <button class="btn" type="button" id="dlCvPdf">CV as PDF</button>
+      <button class="btn" type="button" id="dlCvDoc">CV as Word</button>
+      <button class="btn" type="button" id="dlLtPdf">Letter as PDF</button>
+      <button class="btn" type="button" id="dlLtDoc">Letter as Word</button>
+      <button class="btn ghost" type="button" id="cpCv">Copy CV as text</button>
+      <button class="btn ghost" type="button" id="cpLetter">Copy letter as text</button>
+    </div>
+    <p class="small muted" id="dlMsg" role="status"></p>
+    <div class="actions"><button class="btn quiet" type="button" data-step="1">Edit my details</button></div>
+  </section>
+
+  <section class="panel" id="previewWrap" hidden aria-labelledby="h-prev">
+    <h2 id="h-prev">Preview</h2>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tabCv" aria-selected="true" type="button" data-doc="cv">CV</button>
+      <button class="tab" role="tab" id="tabLetter" aria-selected="false" type="button" data-doc="letter">Application letter</button>
+    </div>
+    <div class="preview-box">
+      <div class="paper" id="paper"></div>
+      <div class="lock-tag" id="lockTag"><span>Locked until payment is confirmed</span></div>
+    </div>
+  </section>
+</div>
+
+<datalist id="addressees">
+  <option value="The Human Resource Manager"></option>
+  <option value="The Commissioner-General"></option>
+  <option value="The Director-General"></option>
+  <option value="The Permanent Secretary"></option>
+  <option value="The Town Clerk"></option>
+  <option value="The Head Teacher"></option>
+  <option value="The Executive Director"></option>
+</datalist>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+(function () {
+  /*CONFIG*/
+  /*ENGINE_INLINE*/
+
+  var STORE_KEY = "zedcv-draft-v2";
+  var SAMPLE = {
+    sample: true, target: "teaching",
+    name: "Mulenga Chanda", phone: "0977 000 000", email: "mulenga.chanda@example.com",
+    address: "Plot 123, Kabwata, Lusaka", nrc: "", dob: "", sex: "", marital: "", origin: "",
+    nationality: "Zambian", languages: "English, Bemba, Nyanja",
+    summary: "",
+    skills: "Lesson planning, CBC assessment, Classroom management, Learner counselling, Parent engagement, Microsoft Word",
+    edu: [
+      { qual: "Diploma in Primary Teaching", inst: "Example Teachers College", start: "2021", end: "2024" },
+      { qual: "Grade 12 School Certificate", inst: "Example Secondary School", start: "2012", end: "2016" }
+    ],
+    exp: [
+      { role: "Class Teacher (Grade 4)", org: "Example Private School", place: "Lusaka", start: "2024", end: "",
+        duties: "Taught Mathematics, English and Science to 38 learners using the CBC syllabus\nPrepared schemes of work, lesson plans and termly assessments\nMet parents each term to discuss learner progress" },
+      { role: "Tutor", org: "Example Tuition Centre", place: "Lusaka", start: "2019", end: "2023",
+        duties: "Coached Grade 5 to 7 learners in Mathematics and English\nRaised average test scores through weekly revision sessions" }
+    ],
+    ref: [
+      { name: "Mr A. Mwansa", title: "Head Teacher", org: "Example Private School", phone: "0966 000 000" },
+      { name: "Mrs B. Phiri", title: "Centre Manager", org: "Example Tuition Centre", phone: "0955 000 000" }
+    ],
+    position: "Primary School Teacher", addressee: "The Human Resource Manager",
+    employer: "Example Primary School", empAddr: "P.O. Box 00000\nLusaka", source: "", body: ""
+  };
+  var BLANK = {
+    sample: false, target: "teaching", name: "", phone: "", email: "", address: "", nrc: "", dob: "", sex: "", marital: "", origin: "",
+    nationality: "Zambian", languages: "", summary: "", skills: "",
+    edu: [{ qual: "", inst: "", start: "", end: "" }],
+    exp: [{ role: "", org: "", place: "", start: "", end: "", duties: "" }],
+    ref: [{ name: "", title: "", org: "", phone: "" }],
+    position: "", addressee: "The Human Resource Manager", employer: "", empAddr: "", source: "", body: ""
+  };
+
+  var S = clone(SAMPLE), paid = "", step = 1, doc = "cv", engine = null;
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function lc(s) { return s ? s.charAt(0).toLowerCase() + s.slice(1) : s; }
+  function get(path) { return path.split(".").reduce(function (o, k) { return o == null ? "" : o[k]; }, S); }
+  function setPath(path, v) {
+    var ks = path.split("."), o = S;
+    for (var i = 0; i < ks.length - 1; i++) o = o[ks[i]];
+    o[ks[ks.length - 1]] = v;
+  }
+  function persist() { try { localStorage.setItem(STORE_KEY, JSON.stringify({ S: S, paid: paid })); } catch (e) {} }
+  function restore() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (raw) { var d = JSON.parse(raw); if (d && d.S) { S = d.S; paid = d.paid || ""; } }
+    } catch (e) {}
+  }
+  var GOV = function () { return S.target === "gov"; };
+
+  // ===== Content model =====
+  function years() {
+    var ys = S.exp.map(function (e) { return parseInt(e.start, 10); }).filter(function (n) { return n > 1950; });
+    return ys.length ? new Date().getFullYear() - Math.min.apply(null, ys) : 0;
+  }
+  function topQual() { return (S.edu[0] && S.edu[0].qual) || ""; }
+  function autoSummary() {
+    var n = years(), yrs = n >= 2 ? n + " years' experience" : "hands-on experience";
+    var base = {
+      teaching: "Dedicated primary school teacher with " + yrs + " delivering the Zambian Competence-Based Curriculum (CBC), planning engaging lessons, assessing learner progress and working closely with parents and colleagues.",
+      ngo: "Community development practitioner with " + yrs + " in project support, community engagement and monitoring and evaluation, committed to measurable results for vulnerable households.",
+      gov: "Reliable and disciplined professional with " + yrs + " in public service delivery, record keeping and community work, able to follow procedure, work under supervision and meet deadlines.",
+      gen: "Hardworking and organised professional with " + yrs + ", strong communication skills and a record of meeting targets."
+    }[S.target];
+    var q = topQual();
+    return q ? base + " Holder of a " + q + "." : base;
+  }
+  function summaryText() { return S.summary.trim() || autoSummary(); }
+  function dates(s, e) { return s ? s + " – " + (e || "Present") : (e || ""); }
+  function lines(t) { return String(t || "").split("\n").map(function (x) { return x.trim(); }).filter(Boolean); }
+  function list(t) { return String(t || "").split(/[,\n]/).map(function (x) { return x.trim(); }).filter(Boolean); }
+
+  var TITLES = {
+    teaching: { summary: "Professional Profile", edu: "Qualifications", exp: "Teaching Experience", skills: "Key Skills", personal: "Personal Details", ref: "Referees" },
+    ngo: { summary: "Professional Profile", edu: "Education and Training", exp: "Work Experience", skills: "Key Skills", personal: "Personal Details", ref: "Referees" },
+    gov: { summary: "Career Objective", edu: "Academic and Professional Qualifications", exp: "Work Experience", skills: "Skills and Competencies", personal: "Personal Particulars", ref: "Referees" },
+    gen: { summary: "Profile", edu: "Education", exp: "Work Experience", skills: "Skills", personal: "Personal Details", ref: "Referees" }
+  };
+  var ORDER = {
+    teaching: ["summary", "edu", "exp", "skills", "personal", "ref"],
+    ngo: ["summary", "skills", "exp", "edu", "personal", "ref"],
+    gov: ["personal", "summary", "edu", "exp", "skills", "ref", "decl"],
+    gen: ["summary", "exp", "edu", "skills", "personal", "ref"]
+  };
+
+  function cvBlocks() {
+    var B = [], T = TITLES[S.target] || TITLES.gen, gov = GOV();
+    if (gov) B.push({ t: "title", v: "CURRICULUM VITAE" });
+    B.push({ t: "name", v: S.name || "Your Name", c: gov });
+    var contact = [S.phone, S.email, S.address].filter(Boolean).join("  |  ");
+    if (contact) B.push({ t: "contact", v: contact, c: gov });
+    ORDER[S.target].forEach(function (k) {
+      if (k === "summary") { B.push({ t: "h", v: T.summary }); B.push({ t: "p", v: summaryText() }); }
+      if (k === "skills" && list(S.skills).length) { B.push({ t: "h", v: T.skills }); B.push({ t: "p", v: list(S.skills).join(", ") }); }
+      if (k === "personal") {
+        var kv = [["Full name", gov ? S.name : ""], ["Date of birth", S.dob], ["Sex", S.sex], ["Marital status", S.marital], ["Nationality", S.nationality],
+          ["Home province/district", S.origin], ["NRC number", S.nrc], ["Languages", S.languages]].filter(function (x) { return x[1]; });
+        if (kv.length) { B.push({ t: "h", v: T.personal }); kv.forEach(function (x) { B.push({ t: "kv", k: x[0], v: x[1] }); }); }
+      }
+      if (k === "edu") {
+        var ed = S.edu.filter(function (e) { return e.qual || e.inst; });
+        if (ed.length) { B.push({ t: "h", v: T.edu }); ed.forEach(function (e) { B.push({ t: "entry", title: e.qual, date: dates(e.start, e.end), sub: e.inst, bullets: [] }); }); }
+      }
+      if (k === "exp") {
+        var ex = S.exp.filter(function (e) { return e.role || e.org; });
+        if (ex.length) {
+          B.push({ t: "h", v: T.exp });
+          ex.forEach(function (e) { B.push({ t: "entry", title: e.role, date: dates(e.start, e.end), sub: [e.org, e.place].filter(Boolean).join(", "), bullets: lines(e.duties) }); });
+        }
+      }
+      if (k === "ref") {
+        var rf = S.ref.filter(function (r) { return r.name; });
+        if (rf.length) {
+          B.push({ t: "h", v: T.ref });
+          rf.forEach(function (r) { B.push({ t: "entry", title: r.name, date: "", sub: [r.title, r.org].filter(Boolean).join(", ") + (r.phone ? "  |  Tel: " + r.phone : ""), bullets: [] }); });
+        }
+      }
+      if (k === "decl") {
+        B.push({ t: "h", v: "Declaration" });
+        B.push({ t: "p", v: "I declare that the information given in this curriculum vitae is true and correct to the best of my knowledge." });
+        B.push({ t: "sig" });
+      }
+    });
+    return B;
+  }
+
+  function andList(a) { return a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1]; }
+  function today() { return new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }); }
+  function autoLetterBody() {
+    var P = [], n = years(), q = topQual();
+    var latest = S.exp.filter(function (e) { return e.role || e.org; })[0];
+    var p1 = "I wish to apply for the position of " + (S.position || "[position]") + " at " + (S.employer || "[employer]") + (S.source ? ", as advertised " + S.source : "") + ".";
+    var qual = [];
+    if (q) qual.push("I hold a " + q);
+    if (n >= 2) qual.push((q ? "have " : "I have ") + n + " years of experience" + (latest && latest.role ? ", most recently as " + latest.role + (latest.org ? " at " + latest.org : "") : ""));
+    else if (latest && latest.role) qual.push((q ? "currently work" : "I currently work") + " as " + latest.role + (latest.org ? " at " + latest.org : ""));
+    if (qual.length) p1 += " " + (qual.length > 1 ? qual[0] + " and " + qual[1] : qual[0]) + ".";
+    P.push(p1);
+    if (latest) {
+      var d = lines(latest.duties);
+      if (d.length) P.push("As " + (latest.role || "a team member") + (latest.org ? " at " + latest.org : "") + ", I " + lc(d[0]) + (d[1] ? " and " + lc(d[1]) : "") + ".");
+    }
+    var sk = list(S.skills).slice(0, 4);
+    if (sk.length) P.push("My key strengths include " + andList(sk) + ". I work well with colleagues, take instruction well and am committed to meeting the expectations of the role.");
+    P.push("My CV, with the names of my referees, is attached. I would welcome the opportunity to attend an interview and can be reached on " + (S.phone || "[phone]") + (S.email ? " or " + S.email : "") + ". Thank you for considering my application.");
+    return P.join("\n\n");
+  }
+  function letterBlocks() {
+    var sender = [S.name, S.address, S.phone, S.email].filter(Boolean);
+    var rcpt = [S.addressee, S.employer].concat(lines(S.empAddr)).filter(Boolean);
+    var B = [
+      { lines: sender },
+      { lines: [today()] },
+      { lines: rcpt },
+      { lines: ["Dear Sir/Madam,"] },
+      { lines: ["RE: APPLICATION FOR THE POSITION OF " + (S.position || "POSITION").toUpperCase()], re: true },
+      { lines: [(S.body.trim() || autoLetterBody())], body: true },
+      { lines: ["Yours faithfully,"] },
+      { lines: [S.name || "Your Name"], sign: true }
+    ];
+    if (GOV()) B.push({ lines: ["", "Enclosures:", "1. Curriculum vitae", "2. Certified copies of academic and professional certificates", "3. Copy of National Registration Card (NRC)"] });
+    return B;
+  }
+
+  // ===== HTML preview =====
+  function cvHtml() {
+    return cvBlocks().map(function (b) {
+      var c = b.c ? " center" : "";
+      switch (b.t) {
+        case "title": return '<div class="cv-title">' + esc(b.v) + "</div>";
+        case "name": return '<div class="cv-name' + c + '">' + esc(b.v) + "</div>";
+        case "contact": return '<div class="cv-contact' + c + '">' + esc(b.v) + "</div>";
+        case "h": return '<div class="cv-h">' + esc(b.v) + "</div>";
+        case "p": return '<div class="cv-p">' + esc(b.v) + "</div>";
+        case "kv": return '<div class="cv-kv"><b>' + esc(b.k) + "</b><span>" + esc(b.v) + "</span></div>";
+        case "sig": return '<div class="cv-sig"><span>Signature</span><span>Date</span></div>';
+        case "entry":
+          return '<div class="cv-entry"><div class="top"><span>' + esc(b.title) + "</span><span>" + esc(b.date) + "</span></div>" +
+            (b.sub ? '<div class="sub">' + esc(b.sub) + "</div>" : "") +
+            (b.bullets.length ? "<ul>" + b.bullets.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>" : "") + "</div>";
+      }
+      return "";
+    }).join("");
+  }
+  function letterHtml() {
+    return letterBlocks().map(function (b) {
+      return '<div class="lt-p' + (b.re ? " lt-re" : "") + '">' + esc(b.lines.join("\n")) + "</div>";
+    }).join("");
+  }
+  function renderPreview() {
+    $("paper").innerHTML = doc === "cv" ? cvHtml() : letterHtml();
+    var locked = !paid;
+    $("paper").classList.toggle("locked", locked);
+    $("lockTag").hidden = !locked;
+    $("tabCv").setAttribute("aria-selected", doc === "cv");
+    $("tabLetter").setAttribute("aria-selected", doc === "letter");
+  }
+
+  // ===== Plain text =====
+  function cvText() {
+    return cvBlocks().map(function (b) {
+      if (b.t === "title") return b.v;
+      if (b.t === "name") return b.v.toUpperCase();
+      if (b.t === "contact") return b.v + "\n";
+      if (b.t === "h") return "\n" + b.v.toUpperCase();
+      if (b.t === "p") return b.v;
+      if (b.t === "kv") return b.k + ": " + b.v;
+      if (b.t === "sig") return "\nSignature: ____________________   Date: ____________";
+      if (b.t === "entry") return b.title + (b.date ? " (" + b.date + ")" : "") + (b.sub ? "\n" + b.sub : "") + (b.bullets.length ? "\n" + b.bullets.map(function (x) { return "- " + x; }).join("\n") : "");
+      return "";
+    }).join("\n");
+  }
+  function letterText() { return letterBlocks().map(function (b) { return b.lines.join("\n"); }).join("\n\n"); }
+
+  // ===== Form =====
+  function F(label, path, o) {
+    o = o || {};
+    var id = "f-" + path.replace(/\./g, "-"), v = esc(get(path));
+    var ctl = o.rows
+      ? '<textarea id="' + id + '" rows="' + o.rows + '" data-p="' + path + '" placeholder="' + esc(o.ph || "") + '">' + v + "</textarea>"
+      : '<input id="' + id + '" data-p="' + path + '" value="' + v + '" placeholder="' + esc(o.ph || "") + '"' + (o.type ? ' type="' + o.type + '"' : "") + (o.inputmode ? ' inputmode="' + o.inputmode + '"' : "") + (o.list ? ' list="' + o.list + '"' : "") + ">";
+    return '<div class="field"><label for="' + id + '">' + label + "</label>" + ctl + (o.hint ? '<span class="hint">' + o.hint + "</span>" : "") + "</div>";
+  }
+  function repeater(key, title, items, render, max) {
+    var h = '<fieldset><legend>' + title + "</legend>";
+    items.forEach(function (it, i) {
+      h += '<div class="item"><div class="item-head"><h3>' + title.replace(/s$/, "") + " " + (i + 1) + '</h3>' +
+        (items.length > 1 ? '<button class="btn small quiet" type="button" data-rm="' + key + ":" + i + '">Remove</button>' : "") + "</div>" + render(i) + "</div>";
+    });
+    if (items.length < max) h += '<div class="actions"><button class="btn small ghost" type="button" data-add="' + key + '">Add another</button></div>';
+    return h + "</fieldset>";
+  }
+  function renderForm() {
+    var h = "";
+    h += '<fieldset><legend>What are you applying for?</legend><div class="field"><label for="f-target">Type of job</label><select id="f-target" data-p="target">' +
+      [["teaching", "Teaching (primary or secondary school)"], ["ngo", "NGO or community development"], ["gov", "ZRA, ZAQA or other government and parastatal jobs"], ["gen", "Any other job"]]
+        .map(function (o) { return '<option value="' + o[0] + '"' + (S.target === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") +
+      '</select><span class="hint">This sets the section order and the wording. The government layout adds a personal particulars section, a declaration with signature line, and an enclosures list on the letter.</span></div></fieldset>';
+    h += '<fieldset><legend>Your details</legend><div class="row">' + F("Full name", "name") + F("Phone number", "phone", { type: "tel", inputmode: "tel" }) + "</div>" +
+      '<div class="row">' + F("Email", "email", { type: "email", inputmode: "email" }) + F("Town and address", "address") + "</div>" +
+      '<div class="row">' + F("Nationality", "nationality") + F("Languages", "languages", { hint: "Separate with commas." }) + "</div>" +
+      '<div class="row">' + F("NRC number", "nrc", { hint: "Government jobs normally ask for it." }) + F("Date of birth", "dob", { ph: "e.g. 14 March 1995" }) + "</div>" +
+      '<div class="row">' + F("Sex", "sex", { ph: "Male or Female" }) + F("Marital status", "marital", { ph: "e.g. Single" }) + "</div>" +
+      F("Home province and district", "origin", { ph: "e.g. Muchinga Province, Mpika District" }) + "</fieldset>";
+    h += '<fieldset><legend>Profile</legend>' + F("Short profile (3 to 4 lines)", "summary", { rows: 4, hint: "Leave blank and ZedCV writes one for you." }) +
+      '<div class="actions"><button class="btn small ghost" type="button" id="fillSummary">Write a profile for me</button></div></fieldset>';
+    h += repeater("edu", "Education", S.edu, function (i) {
+      var p = "edu." + i + ".";
+      return F("Qualification", p + "qual", { ph: "e.g. Diploma in Primary Teaching" }) + F("School or college", p + "inst") +
+        '<div class="row">' + F("Start year", p + "start", { inputmode: "numeric" }) + F("End year", p + "end", { inputmode: "numeric" }) + "</div>";
+    }, 6);
+    h += repeater("exp", "Experience", S.exp, function (i) {
+      var p = "exp." + i + ".";
+      return '<div class="row">' + F("Job title", p + "role") + F("Employer", p + "org") + "</div>" + F("Town", p + "place") +
+        '<div class="row">' + F("Start year", p + "start", { inputmode: "numeric" }) + F("End year", p + "end", { inputmode: "numeric", hint: "Leave blank if you still work here." }) + "</div>" +
+        F("What you did (one line each)", p + "duties", { rows: 4, hint: "Start each line with a verb such as Taught, Managed or Organised." });
+    }, 6);
+    h += '<fieldset><legend>Skills</legend>' + F("Key skills", "skills", { rows: 2, hint: "Separate with commas." }) + "</fieldset>";
+    h += repeater("ref", "Referees", S.ref, function (i) {
+      var p = "ref." + i + ".";
+      return '<div class="row">' + F("Name", p + "name") + F("Job title", p + "title") + "</div>" +
+        '<div class="row">' + F("Organisation", p + "org") + F("Phone", p + "phone", { type: "tel", inputmode: "tel" }) + "</div>";
+    }, 3);
+    h += '<fieldset><legend>Application letter</legend><div class="row">' + F("Position you are applying for", "position") + F("Addressed to", "addressee", { list: "addressees" }) + "</div>" +
+      '<div class="row">' + F("Employer", "employer") + F("Where you saw the advert (optional)", "source", { ph: "e.g. in the Daily Mail of 20 October 2026" }) + "</div>" +
+      F("Employer address", "empAddr", { rows: 3, hint: "Copy it from the advert." }) +
+      F("Letter body (optional)", "body", { rows: 9, hint: "Leave blank and ZedCV writes the letter from your CV details." }) +
+      '<div class="actions"><button class="btn small ghost" type="button" id="fillLetter">Write the letter for me</button></div></fieldset>';
+    $("formRoot").innerHTML = h;
+    $("sampleNote").hidden = !S.sample;
+  }
+
+  // ===== Steps =====
+  function show(n) {
+    if (n === 3 && !paid) n = 2;
+    step = n;
+    ["p1", "p2", "p3"].forEach(function (id, i) { $(id).hidden = i + 1 !== n; });
+    $("previewWrap").hidden = n === 1;
+    document.querySelectorAll(".step-btn").forEach(function (b) { b.setAttribute("aria-current", +b.dataset.step === n ? "step" : "false"); });
+    if (n === 3) $("paidNote").textContent = "Payment confirmed. Your documents are ready.";
+    renderPreview();
+    window.scrollTo({ top: 0 });
+  }
+  function validate() {
+    var miss = [];
+    if (!S.name.trim()) miss.push("your full name");
+    if (!S.phone.trim()) miss.push("your phone number");
+    if (!S.position.trim()) miss.push("the position you are applying for");
+    return miss;
+  }
+
+  // ===== Payment and engine =====
+  function factory(src) { return new Function("jspdf", "JSZip", src)(window.jspdf, window.JSZip); }
+  async function loadEngine() {
+    if (engine) return engine;
+    if (CONFIG.mode === "demo") { engine = factory(ENGINE_SRC); return engine; }
+    var r = await fetch("/api/engine?token=" + encodeURIComponent(paid), { cache: "no-store" });
+    if (!r.ok) { var e = new Error("engine"); e.status = r.status; throw e; }
+    engine = factory(await r.text());
+    return engine;
+  }
+  async function verifyPayment(id) {
+    if (CONFIG.mode === "demo") {
+      if (!/^[A-Za-z0-9.\-]{8,}$/.test(id)) throw new Error("Enter the transaction ID from your Airtel Money confirmation SMS. It has at least 8 letters or digits.");
+      return "demo-" + id;
+    }
+    var r, j = {};
+    try {
+      r = await fetch("/api/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ txn: id }) });
+      j = await r.json();
+    } catch (e) { throw new Error("Could not reach the server. Check your internet connection and try again."); }
+    if (!r.ok) throw new Error(j.error || "Payment could not be verified.");
+    return j.token;
+  }
+
+  // ===== Events =====
+  $("formRoot").addEventListener("input", function (e) {
+    var p = e.target.dataset && e.target.dataset.p;
+    if (!p) return;
+    setPath(p, e.target.value); persist(); renderPreview();
+  });
+  $("formRoot").addEventListener("change", function (e) {
+    if (e.target.id === "f-target") { S.target = e.target.value; persist(); renderPreview(); }
+  });
+  $("formRoot").addEventListener("click", function (e) {
+    var t = e.target.closest("button"); if (!t) return;
+    if (t.dataset.add) {
+      var tpl = { edu: BLANK.edu[0], exp: BLANK.exp[0], ref: BLANK.ref[0] }[t.dataset.add];
+      S[t.dataset.add].push(clone(tpl)); persist(); renderForm();
+    } else if (t.dataset.rm) {
+      var a = t.dataset.rm.split(":"); S[a[0]].splice(+a[1], 1); persist(); renderForm();
+    } else if (t.id === "fillSummary") { S.summary = autoSummary(); persist(); renderForm(); }
+    else if (t.id === "fillLetter") { S.body = autoLetterBody(); persist(); renderForm(); }
+  });
+  $("clearSample").addEventListener("click", function () { S = clone(BLANK); persist(); renderForm(); });
+  $("toPay").addEventListener("click", function () {
+    var miss = validate();
+    if (miss.length) { $("p1err").textContent = "Please add " + miss.join(", ") + "."; return; }
+    $("p1err").textContent = ""; show(paid ? 3 : 2);
+  });
+  document.querySelectorAll("[data-step]").forEach(function (b) { b.addEventListener("click", function () { show(+b.dataset.step); }); });
+  document.querySelectorAll(".tab").forEach(function (b) { b.addEventListener("click", function () { doc = b.dataset.doc; renderPreview(); }); });
+
+  var PRICE = "K" + CONFIG.price;
+  $("momoNum").textContent = CONFIG.momoNumber;
+  $("momoName").textContent = CONFIG.momoName + " (" + CONFIG.network + ")";
+  $("priceTag").textContent = PRICE + " per set";
+  $("amt2").textContent = PRICE; $("amtBig").textContent = PRICE;
+  document.querySelectorAll(".amt-inline").forEach(function (n) { n.textContent = PRICE; });
+  $("demoBanner").hidden = CONFIG.mode !== "demo";
+
+  function copyText(text, done) {
+    var fallback = function () {
+      var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); done(true); } catch (e) { done(false); }
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { done(true); }, fallback);
+    else fallback();
+  }
+  $("copyNum").addEventListener("click", function () {
+    copyText(CONFIG.momoNumber.replace(/\s/g, ""), function (ok) { $("copyNum").textContent = ok ? "Copied" : "Select and copy"; setTimeout(function () { $("copyNum").textContent = "Copy number"; }, 1800); });
+  });
+  $("unlock").addEventListener("click", async function () {
+    var id = $("txn").value.trim().toUpperCase(), btn = $("unlock");
+    if (!id) { $("p2err").textContent = "Enter the transaction ID first."; return; }
+    btn.disabled = true; btn.textContent = "Checking payment..."; $("p2err").textContent = "";
+    try {
+      paid = await verifyPayment(id); engine = null; await loadEngine();
+      persist(); show(3);
+    } catch (e) { paid = ""; $("p2err").textContent = e.message || "Payment could not be verified."; }
+    btn.disabled = false; btn.textContent = "Unlock downloads";
+  });
+
+  function slug() { return (S.name || "my").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || "my"; }
+  function msg(t) { $("dlMsg").textContent = t; }
+  async function saveBlob(filename, blob) {
+    var dl = null;
+    try { if (window.claude && window.claude.use) dl = await window.claude.use("downloads"); } catch (e) {}
+    if (dl) { await dl.save({ filename: filename, data: blob }); return; }
+    var url = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }
+  async function make(kind, fmt) {
+    if (!paid) { show(2); return; }
+    msg("Preparing your file...");
+    try {
+      var eng = await loadEngine();
+      var blocks = kind === "cv" ? cvBlocks() : letterBlocks();
+      var blob = await eng[fmt](kind, blocks);
+      var name = slug() + (kind === "cv" ? "-CV" : "-Application-Letter") + (fmt === "pdf" ? ".pdf" : ".docx");
+      await saveBlob(name, blob);
+      msg("Saved " + name + ". Check your Downloads folder.");
+    } catch (err) {
+      if (err && err.code === "declined") { msg("Save cancelled."); return; }
+      if (err && (err.status === 401 || err.status === 403)) { paid = ""; engine = null; persist(); msg(""); $("p2err").textContent = "Your payment session has ended. Enter your transaction ID again."; show(2); return; }
+      msg("The file could not be saved here. Use the copy buttons instead.");
+    }
+  }
+  $("dlCvPdf").addEventListener("click", function () { make("cv", "pdf"); });
+  $("dlCvDoc").addEventListener("click", function () { make("cv", "docx"); });
+  $("dlLtPdf").addEventListener("click", function () { make("letter", "pdf"); });
+  $("dlLtDoc").addEventListener("click", function () { make("letter", "docx"); });
+  $("cpCv").addEventListener("click", function () { if (!paid) { show(2); return; } copyText(cvText(), function (ok) { msg(ok ? "CV copied as text." : "Copy failed. Select the preview text and copy it."); }); });
+  $("cpLetter").addEventListener("click", function () { if (!paid) { show(2); return; } copyText(letterText(), function (ok) { msg(ok ? "Letter copied as text." : "Copy failed. Select the preview text and copy it."); }); });
+
+  restore();
+  renderForm();
+  show(1);
+  // In server mode a saved payment token is only trusted once the server accepts it again.
+  if (paid && CONFIG.mode !== "demo") loadEngine().catch(function () { paid = ""; persist(); renderPreview(); });
+})();
+</script>

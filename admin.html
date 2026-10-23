@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZedCV payments</title>
+<style>
+:root{--bg:#F2F5F3;--s:#fff;--fg:#14201A;--m:#55665D;--l:#D3DDD7;--a:#1B6B49;--ai:#fff;--w:#B8561A;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1613;--s:#17211C;--fg:#E7EFEA;--m:#93A59B;--l:#263630;--a:#4FBF8B;--ai:#072114;--w:#F0914A;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif;padding:20px max(16px,env(safe-area-inset-left))}
+main{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:16px}h1,h2{margin:0}h2{font-size:1.1rem}
+.card{background:var(--s);border:1px solid var(--l);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px}
+input,textarea,button{font:inherit;padding:10px 12px;border-radius:8px;border:1px solid var(--l);background:var(--bg);color:var(--fg);min-height:44px;width:100%}
+button{background:var(--a);color:var(--ai);border-color:var(--a);font-weight:700;cursor:pointer;width:auto}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1 1 10rem}
+table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--l);white-space:nowrap}
+.scroll{overflow-x:auto}.m{color:var(--m);font-size:.875rem}.used{color:var(--m)}.free{color:var(--a);font-weight:700}pre{margin:0;white-space:pre-wrap;font-size:.85rem}
+</style></head><body><main>
+<h1>ZedCV payments</h1>
+<div class="card"><label for="key">Admin key</label><div class="row"><input id="key" type="password" autocomplete="current-password"><button id="go">Load payments</button></div><p class="m" id="status"></p></div>
+<div class="card"><h2>Add a payment by hand</h2><p class="m">Use this if the SMS forwarder missed one. Copy the transaction ID from the Airtel Money message on your phone.</p>
+<div class="row"><input id="txn" placeholder="Transaction ID"><input id="amt" inputmode="decimal" placeholder="Amount in kwacha"><button id="add">Add</button></div></div>
+<div class="card"><h2>Test an SMS</h2><p class="m">Paste a real "money received" SMS to check the server can read it.</p><textarea id="sms" rows="3"></textarea><div class="row"><button id="test">Test reading</button></div><pre id="testOut"></pre></div>
+<div class="card"><h2>Recent payments</h2><div class="scroll"><table><thead><tr><th>Received</th><th>Transaction ID</th><th>Amount</th><th>From</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table></div>
+<h2>Texts that could not be read</h2><pre id="unparsed" class="m">None</pre></div>
+</main><script>
+const $=id=>document.getElementById(id);let KEY="";try{KEY=sessionStorage.getItem("k")||""}catch(e){}$("key").value=KEY;
+async function api(path,body){const r=await fetch(path,{method:body?"POST":"GET",headers:{"x-admin-key":$("key").value,"content-type":"application/json"},body:body?JSON.stringify(body):undefined});const j=await r.json();if(!r.ok)throw new Error(j.error||"Error");return j}
+const fmt=t=>new Date(t).toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function load(){try{const j=await api("/api/admin/payments");try{sessionStorage.setItem("k",$("key").value)}catch(e){}
+$("status").textContent=j.rows.length+" payments recorded. Price is K"+j.price+".";
+$("rows").innerHTML=j.rows.map(r=>"<tr><td>"+fmt(r.receivedAt)+"</td><td>"+esc(r.txn)+"</td><td>K"+r.amount+"</td><td>"+esc(r.from||"")+"</td><td class='"+(r.claimedAt?"used":"free")+"'>"+(r.claimedAt?"Used "+fmt(r.claimedAt):"Waiting")+"</td></tr>").join("");
+$("unparsed").textContent=j.unparsed.length?j.unparsed.map(u=>fmt(u.at)+": "+u.text).join("\n\n"):"None"}catch(e){$("status").textContent=e.message}}
+$("go").onclick=load;
+$("add").onclick=async()=>{try{await api("/api/admin/add",{txn:$("txn").value,amount:$("amt").value});$("txn").value="";$("amt").value="";load()}catch(e){$("status").textContent=e.message}};
+$("test").onclick=async()=>{try{const j=await api("/api/admin/test",{text:$("sms").value});$("testOut").textContent=j.parsed?JSON.stringify(j.parsed,null,2):"Could not find both an amount and a transaction ID. Send me this SMS text and I will adjust the reader."}catch(e){$("testOut").textContent=e.message}};
+if(KEY)load();
+</script></body></html>
